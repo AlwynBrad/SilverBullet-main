@@ -47,19 +47,23 @@ If a breakout occurs, it returns True along with the price level of the breakout
 from datetime import datetime, timedelta
 
 def check_breakout(df, asia_high, london_high, pre_new_york_high, asia_low, london_low, pre_new_york_low):
-    # Get today's date
-    today_date = datetime.now().date()
+    # Get the earliest timestamp in the DataFrame
+    earliest_timestamp = df['timestamp'].min()
+    earliest_date = earliest_timestamp.date()
     
-    # Filter data for today's date and the period between 00:00 EST and 10:00 AM EST
-    start_time = datetime.combine(today_date, datetime.min.time())  # Midnight of the current day
-    end_time = start_time + timedelta(hours=10)  # 10:00 AM of the current day
-    df_midnight_to_10am = df[(df['timestamp'] >= start_time) & (df['timestamp'] < end_time)].copy()
+    # Calculate the date of the second day from the earliest date
+    second_day_date = earliest_date + pd.Timedelta(days=1)
+    
+    # Set the start time to midnight of the second day
+    start_time = datetime.combine(second_day_date, datetime.min.time())  # Midnight of the second day
+    end_time = start_time + timedelta(hours=9, minutes=30)  # 9:30 AM of the second day
+    df_midnight_to_9_30am = df[(df['timestamp'] >= start_time) & (df['timestamp'] < end_time)].copy()
     
     # Get the maximum high and minimum low within the specified period
-    max_high_midnight_to_10am = df_midnight_to_10am['high'].max()
-    min_low_midnight_to_10am = df_midnight_to_10am['low'].min()
+    max_high_midnight_to_9_30am = df_midnight_to_9_30am['high'].max()
+    min_low_midnight_to_9_30am = df_midnight_to_9_30am['low'].min()
     
-    # ensure no nonetype
+    # Ensure no nonetype
     if (asia_high is not None and 
         asia_low is not None and 
         london_high is not None and 
@@ -68,11 +72,11 @@ def check_breakout(df, asia_high, london_high, pre_new_york_high, asia_low, lond
         pre_new_york_low is not None):
 
         # Check for breakout in high prices
-        if max_high_midnight_to_10am > pre_new_york_high or max_high_midnight_to_10am > london_high or max_high_midnight_to_10am > asia_high:
-            return True, max_high_midnight_to_10am, 'high'
+        if max_high_midnight_to_9_30am > pre_new_york_high or max_high_midnight_to_9_30am > london_high or max_high_midnight_to_9_30am > asia_high:
+            return True, max_high_midnight_to_9_30am, 'high'
         # Check for breakout in low prices
-        elif min_low_midnight_to_10am < pre_new_york_low or min_low_midnight_to_10am < london_low or min_low_midnight_to_10am < asia_low:
-            return True, min_low_midnight_to_10am, 'low'
+        elif min_low_midnight_to_9_30am < pre_new_york_low or min_low_midnight_to_9_30am < london_low or min_low_midnight_to_9_30am < asia_low:
+            return True, min_low_midnight_to_9_30am, 'low'
         else:
             return False, None, None
         
