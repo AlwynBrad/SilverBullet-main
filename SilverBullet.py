@@ -222,6 +222,6 @@ asia_high, asia_low, london_high, london_low, pre_new_york_high, pre_new_york_lo
 
 execute_strategy(df, portfolio, asia_high, london_high, pre_new_york_high, asia_low, london_low, pre_new_york_low)
 
-#test
+
 # Print portfolio balance
 print_portfolio_balance(portfolio)
