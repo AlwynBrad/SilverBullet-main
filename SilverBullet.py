@@ -1,9 +1,10 @@
 import pandas as pd
+import numpy as np
 from datetime import datetime, timedelta
 
 # Read the CSV file containing trading data
-# df = pd.read_csv("/mnt/E620153F2015185F/Alwyn Repos/SilverBullet-main/download/usatechidxusd-m5-bid-2024-01-01-2024-04-30T18_30.csv")
-df = pd.read_csv("C:/Users/alwyn/Desktop/SilverBullet-main/download/usatechidxusd-m5-bid-2024-01-01-2024-04-30T18_30.csv")
+df = pd.read_csv("/mnt/E620153F2015185F/Alwyn Repos/SilverBullet-main/download/usatechidxusd-m5-bid-2024-01-01-2024-04-30T18_30.csv")
+# df = pd.read_csv("C:/Users/alwyn/Desktop/SilverBullet-main/download/usatechidxusd-m5-bid-2024-01-01-2024-04-30T18_30.csv")
 
 # Convert Unix epoch timestamps to datetime format
 df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
@@ -11,11 +12,121 @@ df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
 # Convert timestamps from UTC to EST
 df['timestamp'] = df['timestamp'].dt.tz_localize('UTC').dt.tz_convert('America/New_York').dt.tz_localize(None)
 
+# lets also add a day of week column
+df['day_of_week'] = df['timestamp'].dt.dayofweek
+# lets add the day of the week as a string
+df['day_of_week_str'] = np.where(
+    df['day_of_week'] == 0,
+    'Monday',
+    np.where(
+        df['day_of_week'] == 1,
+        'Tuesday',
+        np.where(
+            df['day_of_week'] == 2,
+            'Wednesday',
+            np.where(
+                df['day_of_week'] == 3,
+                'Thursday',
+                np.where(
+                    df['day_of_week'] == 4,
+                    'Friday',
+                    np.where(
+                        df['day_of_week'] == 5,
+                        'Saturday',
+                        np.where(
+                            df['day_of_week'] == 6,
+                            'Sunday',
+                            np.nan
+                        )
+                    )
+                )
+            )
+        )
+    )
+)
+
+df.to_csv("dataframe.csv")
+
+######################################################################################################################
+
+# def define_session_time_range(
+#         df,
+#         session_start_time, 
+#         session_end_time
+# ):
+#     # Create a new column in your DataFrame. It will be True if the time is between the given range and False otherwise.
+#     df['time_in_range'] = df['time'].dt.time.between(
+#         session_start_time,
+#         session_end_time
+#     ) 
+
+#     # we also need to make sure that december 25th is not considered time in range
+#     df['time_in_range'] = np.where(
+#         (df['time'].dt.month == 12) & (df['time'].dt.day == 25),
+#         False,
+#         df['time_in_range']
+#     )
+
+#     df['session_start'] = df['time_in_range'] & ~df['time_in_range'].shift(1, fill_value=False)
+#     df['session_end'] = df['time_in_range'] & ~df['time_in_range'].shift(-1, fill_value=False)
+
+#     df['session_index'] = df['session_start'].cumsum()
+#     df['session_index'] = np.where(
+#         df['time_in_range'] == False,
+#         np.nan,
+#         df['session_index']
+#     )
+
+#     # lets also add a day of week column
+#     df['day_of_week'] = df['time'].dt.dayofweek
+#     # lets add the day of the week as a string
+#     df['day_of_week_str'] = np.where(
+#         df['day_of_week'] == 0,
+#         'Monday',
+#         np.where(
+#             df['day_of_week'] == 1,
+#             'Tuesday',
+#             np.where(
+#                 df['day_of_week'] == 2,
+#                 'Wednesday',
+#                 np.where(
+#                     df['day_of_week'] == 3,
+#                     'Thursday',
+#                     np.where(
+#                         df['day_of_week'] == 4,
+#                         'Friday',
+#                         np.where(
+#                             df['day_of_week'] == 5,
+#                             'Saturday',
+#                             np.where(
+#                                 df['day_of_week'] == 6,
+#                                 'Sunday',
+#                                 np.nan
+#                             )
+#                         )
+#                     )
+#                 )
+#             )
+#         )
+#     )
+
+#     return df
+
+
+######################################################################################################################
+
 # Function to identify key highs and lows for sessions
 def identify_key_highs_lows(df, date):
     print("%%%%%%%%%%%%%%%%%%%%%%%%%%%we are inside the identify_key_highs_lows function%%%%%%%%%%%%%")
     # Calculate the date of the previous day
-    previous_day = date - pd.Timedelta(days=1)
+    # previous_day = date - pd.Timedelta(days=1)
+    # print(f"Date: {date}, Previous Day: {previous_day}")
+
+    if df['day_of_week_str'].iloc[0] == 'Monday':
+        previous_day = date - pd.Timedelta(days=3)
+    else:
+        previous_day = date - pd.Timedelta(days=1)
+
     print(f"Date: {date}, Previous Day: {previous_day}")
     
     # Filter data for the Asia session on the previous day
