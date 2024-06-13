@@ -233,9 +233,11 @@ def execute_strategy(df, portfolio):
     unique_dates = df['timestamp'].dt.date.unique()
     count = 0
     for date in unique_dates:
+
         count += 1
         if count == 1:
             continue
+
         print("\n\n################################## new day start ##########################################\n")
         print(f"Date: {date}")
         asia_high, asia_low, london_high, london_low, pre_new_york_high, pre_new_york_low = identify_key_highs_lows(df, date)
