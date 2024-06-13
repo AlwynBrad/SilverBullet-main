@@ -2,7 +2,9 @@ import pandas as pd
 from datetime import datetime, timedelta
 
 # Read the CSV file containing trading data
-df = pd.read_csv("/mnt/E620153F2015185F/Alwyn Repos/SilverBullet-main/download/usatechidxusd-m5-bid-2024-01-01-2024-04-30T18_30.csv")
+# df = pd.read_csv("/mnt/E620153F2015185F/Alwyn Repos/SilverBullet-main/download/usatechidxusd-m5-bid-2024-01-01-2024-04-30T18_30.csv")
+df = pd.read_csv("C:/Users/alwyn/Desktop/SilverBullet-main/download/usatechidxusd-m5-bid-2024-01-01-2024-04-30T18_30.csv")
+
 # Convert Unix epoch timestamps to datetime format
 df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
 
@@ -119,7 +121,7 @@ def find_fair_value_gaps(df, start_time, end_time):
             fair_value_gaps.append((current_candle['timestamp'], next_next_candle['timestamp'], 'bearish'))
 
     print(f"Fair Value Gaps between {start_time}:00 and {end_time}:00:")
-    print(fair_value_gaps)
+    # print(fair_value_gaps)
     print("%%%%%%%%%%%%%%%%%%%%%%%%%%%we are outside the find_fair_value_gaps function%%%%%%%%%%%%%")
     return fair_value_gaps
 
@@ -235,7 +237,7 @@ def execute_strategy(df, portfolio):
     for date in unique_dates:
 
         count += 1
-        if count == 1:
+        if count <= 2:
             continue
 
         print("\n\n################################## new day start ##########################################\n")
@@ -248,8 +250,8 @@ def execute_strategy(df, portfolio):
         if breakout:
             print("Breakout detected.")
             fair_value_gaps = find_fair_value_gaps(df, 10, 11) + find_fair_value_gaps(df, 14, 15)
-            print(f"Fair Value Gaps:")
-            print(fair_value_gaps)
+            # print(f"Fair Value Gaps:")
+            # print(fair_value_gaps)
             if fair_value_gaps:
                 print("Fair value gaps found.")
                 for i, gap in enumerate(fair_value_gaps):
