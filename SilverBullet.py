@@ -2,7 +2,7 @@ import pandas as pd
 from datetime import datetime, timedelta
 
 # Read the CSV file containing trading data
-df = pd.read_csv("C:\\\Users\\alwyn\\Desktop\\SilverBullet-main\\usatechidxusd-m5-bid-2024-04-22-2024-04-23.csv")
+df = pd.read_csv("/mnt/E620153F2015185F/Alwyn Repos/SilverBullet-main/download/usatechidxusd-m5-bid-2024-01-01-2024-04-30T18_30.csv")
 # Convert Unix epoch timestamps to datetime format
 df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
 
@@ -165,10 +165,14 @@ def execute_strategy(df, portfolio):
                 for i, gap in enumerate(fair_value_gaps):
                     if i == 0:  # Only consider the first fair value gap after 10:00 AM EST and the first fair value gap after 2:00 PM EST
                         gap_direction = determine_gap_direction(df, [gap])[0]
+                        print(f"Fair value gap detected: {gap}")
                         position = enter_position(gap_direction, breakout_type)
+                        print(f"Position to enter: {position}")
                         if position:
                             entry_price = calculate_entry_price(df, gap_direction, gap)
+                            print(f"Entry price: {entry_price}")
                             stop_loss = calculate_stop_loss(df, entry_price, gap_direction, gap)
+                            print(f"Stop-loss: {stop_loss}")
                             target = calculate_target(entry_price, stop_loss, gap_direction)
                             print(f"Enter {position} position at price {entry_price} based on {gap_direction} fair value gap and {breakout_type} breakout.")
                             print(f"Stop-loss: {stop_loss}, Target: {target}")
@@ -176,23 +180,29 @@ def execute_strategy(df, portfolio):
                             # Update trade status based on candle movements
                             for index, candle in df.iterrows():
                                 if candle['timestamp'].hour < 23:  # Iterate until 23:00 EST
+                                    print(f"Timestamp: {candle['timestamp']}, High: {candle['high']}, Low: {candle['low']}")
                                     if position == 'long':
+                                        print(f"Current balance: {portfolio.balance}")
                                         if candle['low'] < stop_loss:
                                             print("Trade marked as loss.")
                                             portfolio.update_balance(-0.005 * portfolio.balance)  # Subtract 0.5% from initial balance for loss
+                                            print(f"Updated balance: {portfolio.balance}")
                                             break
                                         elif candle['high'] > target:
                                             print("Trade marked as profit.")
                                             portfolio.update_balance(0.01 * portfolio.balance)  # Add 1% to initial balance for profit
+                                            print(f"Updated balance: {portfolio.balance}")
                                             break
                                     elif position == 'short':
                                         if candle['high'] > stop_loss:
                                             print("Trade marked as loss.")
                                             portfolio.update_balance(-0.005 * portfolio.balance)  # Subtract 0.5% from initial balance for loss
+                                            print(f"Updated balance: {portfolio.balance}")
                                             break
                                         elif candle['low'] < target:
                                             print("Trade marked as profit.")
                                             portfolio.update_balance(0.01 * portfolio.balance)  # Add 1% to initial balance for profit
+                                            print(f"Updated balance: {portfolio.balance}")
                                             break
                                 else:
                                     print("No trade status update after entering into a position.")
