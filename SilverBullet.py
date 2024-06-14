@@ -3,8 +3,8 @@ import numpy as np
 from datetime import datetime, timedelta
 
 # Read the CSV file containing trading data
-df = pd.read_csv("/Users/alwynbradman/Desktop/Alwyn BA/AB/SilverBullet-main/download/usatechidxusd-m5-bid-2024-01-01-2024-04-30T18_30.csv")
-# df = pd.read_csv("/mnt/E620153F2015185F/Alwyn Repos/SilverBullet-main/download/usatechidxusd-m5-bid-2024-01-01-2024-04-30T18_30.csv")
+# df = pd.read_csv("/Users/alwynbradman/Desktop/Alwyn BA/AB/SilverBullet-main/download/usatechidxusd-m5-bid-2024-01-01-2024-04-30T18_30.csv")
+df = pd.read_csv("/mnt/E620153F2015185F/Alwyn Repos/SilverBullet-main/download/usatechidxusd-m5-bid-2024-01-01-2024-04-30T18_30.csv")
 # df = pd.read_csv("C:/Users/alwyn/Desktop/SilverBullet-main/download/usatechidxusd-m5-bid-2024-01-01-2024-04-30T18_30.csv")
 
 # Convert Unix epoch timestamps to datetime format
@@ -117,7 +117,7 @@ df.to_csv("dataframe.csv")
 ######################################################################################################################
 
 # Function to identify key highs and lows for sessions
-def identify_key_highs_lows(df, date):
+def identify_key_highs_lows(df, date, full_dataset):
     print("%%%%%%%%%%%%%%%%%%%%%%%%%%%we are inside the identify_key_highs_lows function%%%%%%%%%%%%%")
     # Calculate the date of the previous day
     # previous_day = date - pd.Timedelta(days=1)
@@ -131,7 +131,7 @@ def identify_key_highs_lows(df, date):
     print(f"Date: {date}, Previous Day: {previous_day}")
     
     # Filter data for the Asia session on the previous day
-    asia_session = df[(df['timestamp'].dt.date == previous_day) & (df['timestamp'].dt.hour >= 18)].copy()
+    asia_session = full_dataset[(full_dataset['timestamp'].dt.date == previous_day) & (full_dataset['timestamp'].dt.hour >= 18)].copy()
     print("Asia Session:")
     print(asia_session)
     
@@ -296,17 +296,23 @@ def calculate_stop_loss(df, entry_price, direction, gap):
     print("%%%%%%%%%%%%%%%%%%%%%%%%%%%we are inside the calculate_stop_loss function%%%%%%%%%%%%%")
     gap_end_time = gap[1]
     print(f"Gap End Time: {gap_end_time}")
+
     gap_row = df[df['timestamp'] == gap_end_time].iloc[0]
+    gap_row_index = df[df['timestamp'] == gap_end_time].index[0]
+
+    three_candles_before_gap_row_index = gap_row_index - 3
+    sl_row = df.iloc[three_candles_before_gap_row_index]
+
     print(f"Gap Row:")
     print(gap_row)
     if direction == 'bearish':
         print("we are inside the bearish direction")
-        print("we are assigning the stop loss as the high of the gap row, which is: ", gap_row['high'])
-        stop_loss = gap_row['high']
+        print("we are assigning the stop loss as the high of the gap row, which is: ", sl_row['high'])
+        stop_loss = sl_row['high']
     elif direction == 'bullish':
         print("we are inside the bullish direction")
-        print("we are assigning the stop loss as the low of the gap row, which is: ", gap_row['low'])
-        stop_loss = gap_row['low']
+        print("we are assigning the stop loss as the low of the gap row, which is: ", sl_row['low'])
+        stop_loss = sl_row['low']
 
     print(f"Stop-loss: {stop_loss}")
     print("%%%%%%%%%%%%%%%%%%%%%%%%%%%we are outside the calculate_stop_loss function%%%%%%%%%%%%%")
@@ -342,17 +348,20 @@ class Portfolio:
 portfolio = Portfolio()
 
 # Function to execute strategy
-def execute_strategy(df, portfolio):
-    unique_dates = df['timestamp'].dt.date.unique()
-    count = 0
+def execute_strategy(full_dataset, portfolio):
+    unique_dates = full_dataset['timestamp'].dt.date.unique()
+
     for date in unique_dates:
-        count += 1
-        if count <= 2:
+        
+        df = full_dataset[full_dataset['timestamp'].dt.date == date].copy()
+        df.reset_index(drop=True, inplace=True)
+
+        if df['day_of_week_str'].iloc[0] == 'Saturday' or df['day_of_week_str'].iloc[0] == 'Sunday':
             continue
 
         print("\n\n################################## new day start ##########################################\n")
         print(f"Date: {date}")
-        asia_high, asia_low, london_high, london_low, pre_new_york_high, pre_new_york_low = identify_key_highs_lows(df, date)
+        asia_high, asia_low, london_high, london_low, pre_new_york_high, pre_new_york_low = identify_key_highs_lows(df, date, full_dataset)
         print(f"Asia High: {asia_high}, Asia Low: {asia_low}, London High: {london_high}, London Low: {london_low}, Pre-New York High: {pre_new_york_high}, Pre-New York Low: {pre_new_york_low}")
         breakout, entry_price, breakout_type = check_breakout(df, date, asia_high, london_high, pre_new_york_high, asia_low, london_low, pre_new_york_low)
         print(f"Breakout: {breakout}, Entry Price: {entry_price}, Breakout Type: {breakout_type}")
@@ -378,7 +387,8 @@ def execute_strategy(df, portfolio):
                             target = calculate_target(entry_price, stop_loss, gap_direction)
                             print(f"Enter {position} position at price {entry_price} based on {gap_direction} fair value gap and {breakout_type} breakout.")
                             print(f"Stop-loss: {stop_loss}, Target: {target}")
-
+                            
+                            trade_status = 'open'
                             # Update trade status based on candle movements
                             for index, candle in df.iterrows():
                                 if candle['timestamp'].hour < 23:  # Iterate until 23:00 EST
@@ -389,26 +399,38 @@ def execute_strategy(df, portfolio):
                                             print("Trade marked as loss.")
                                             portfolio.update_balance(-0.005 * portfolio.balance)  # Subtract 0.5% from initial balance for loss
                                             print(f"Updated balance: {portfolio.balance}")
+                                            trade_status = 'closed'
                                             break
                                         elif candle['high'] > target:
                                             print("Trade marked as profit.")
                                             portfolio.update_balance(0.01 * portfolio.balance)  # Add 1% to initial balance for profit
                                             print(f"Updated balance: {portfolio.balance}")
+                                            trade_status = 'closed'
                                             break
                                     elif position == 'short':
                                         if candle['high'] > stop_loss:
                                             print("Trade marked as loss.")
                                             portfolio.update_balance(-0.005 * portfolio.balance)  # Subtract 0.5% from initial balance for loss
                                             print(f"Updated balance: {portfolio.balance}")
+                                            trade_status = 'closed'
                                             break
                                         elif candle['low'] < target:
                                             print("Trade marked as profit.")
                                             portfolio.update_balance(0.01 * portfolio.balance)  # Add 1% to initial balance for profit
                                             print(f"Updated balance: {portfolio.balance}")
+                                            trade_status = 'closed'
                                             break
                                 else:
                                     print("No trade status update after entering into a position.")
                                     break
+                            if trade_status == 'open':
+                                print("Trade has been closed forcefully at the end of the day.")
+                                exit_price = df[df['timestamp'].hour == 23].iloc[0]['close']
+                                if position == 'long':
+                                    portfolio.update_balance((exit_price - entry_price) / entry_price * portfolio.balance)
+                                elif position == 'short':
+                                    portfolio.update_balance((entry_price - exit_price) / entry_price * portfolio.balance)
+
                         else:
                             print("No position to enter.")
                         break  # Exit loop after processing the first fair value gap
