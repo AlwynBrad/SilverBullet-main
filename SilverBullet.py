@@ -3,7 +3,8 @@ import numpy as np
 from datetime import datetime, timedelta
 
 # Read the CSV file containing trading data
-df = pd.read_csv("/mnt/E620153F2015185F/Alwyn Repos/SilverBullet-main/download/usatechidxusd-m5-bid-2024-01-01-2024-04-30T18_30.csv")
+df = pd.read_csv("/Users/alwynbradman/Desktop/Alwyn BA/AB/SilverBullet-main/download/usatechidxusd-m5-bid-2024-01-01-2024-04-30T18_30.csv")
+# df = pd.read_csv("/mnt/E620153F2015185F/Alwyn Repos/SilverBullet-main/download/usatechidxusd-m5-bid-2024-01-01-2024-04-30T18_30.csv")
 # df = pd.read_csv("C:/Users/alwyn/Desktop/SilverBullet-main/download/usatechidxusd-m5-bid-2024-01-01-2024-04-30T18_30.csv")
 
 # Convert Unix epoch timestamps to datetime format
@@ -215,10 +216,9 @@ def check_breakout(df, date, asia_high, london_high, pre_new_york_high, asia_low
         print("%%%%%%%%%%%%%%%%%%%%%%%%%%%we are outside the check_breakout function%%%%%%%%%%%%%")
         return False, None, None
 
-# Function to find fair value gaps
-def find_fair_value_gaps(df, start_time, end_time):
+def find_fair_value_gaps(df, date, start_time, end_time):
     print("%%%%%%%%%%%%%%%%%%%%%%%%%%%we are inside the find_fair_value_gaps function%%%%%%%%%%%%%")
-    df = df[(df['timestamp'].dt.hour >= start_time) & (df['timestamp'].dt.hour < end_time)]
+    df = df[(df['timestamp'].dt.date == date) & (df['timestamp'].dt.hour >= start_time) & (df['timestamp'].dt.hour < end_time)]
     fair_value_gaps = []
 
     for i in range(len(df) - 2):
@@ -232,9 +232,9 @@ def find_fair_value_gaps(df, start_time, end_time):
             fair_value_gaps.append((current_candle['timestamp'], next_next_candle['timestamp'], 'bearish'))
 
     print(f"Fair Value Gaps between {start_time}:00 and {end_time}:00:")
-    # print(fair_value_gaps)
     print("%%%%%%%%%%%%%%%%%%%%%%%%%%%we are outside the find_fair_value_gaps function%%%%%%%%%%%%%")
     return fair_value_gaps
+
 
 # Function to determine the direction of fair value gaps
 def determine_gap_direction(df, fair_value_gaps):
@@ -270,6 +270,26 @@ def enter_position(direction, breakout_type):
         print("No position to enter.")
         print("%%%%%%%%%%%%%%%%%%%%%%%%%%%we are outside the enter_position function%%%%%%%%%%%%%")
         return None
+
+# Function to calculate entry price
+def calculate_entry_price(df, gap_direction, gap):
+    print("%%%%%%%%%%%%%%%%%%%%%%%%%%%we are inside the calculate_entry_price function%%%%%%%%%%%%%")
+    print(f"Gap Direction: {gap_direction}")
+    print(f"Gap: {gap}")
+    gap_end_time = gap[1]
+    print(f"Gap End Time: {gap_end_time}")
+    gap_row = df[df['timestamp'] == gap_end_time].iloc[0]
+    print(f"Gap Row:")
+    if gap_direction == 'bullish':
+        print("we are inside the bullish direction")
+        print("we are returning the low of the gap row as the entry price, which is: ", gap_row['low'])
+        print("%%%%%%%%%%%%%%%%%%%%%%%%%%%we are outside the calculate_entry_price function%%%%%%%%%%%%%")
+        return gap_row['low']  # Entry price for bullish trade is the low of the third candle
+    elif gap_direction == 'bearish':
+        print("we are inside the bearish direction")
+        print("we are returning the high of the gap row as the entry price, which is: ", gap_row['high'])
+        print("%%%%%%%%%%%%%%%%%%%%%%%%%%%we are outside the calculate_entry_price function%%%%%%%%%%%%%")
+        return gap_row['high']  # Entry price for bearish trade is the high of the third candle
 
 # Function to calculate stop-loss level
 def calculate_stop_loss(df, entry_price, direction, gap):
@@ -321,32 +341,11 @@ class Portfolio:
 # Initialize portfolio
 portfolio = Portfolio()
 
-# Function to calculate entry price
-def calculate_entry_price(df, gap_direction, gap):
-    print("%%%%%%%%%%%%%%%%%%%%%%%%%%%we are inside the calculate_entry_price function%%%%%%%%%%%%%")
-    print(f"Gap Direction: {gap_direction}")
-    print(f"Gap: {gap}")
-    gap_end_time = gap[1]
-    print(f"Gap End Time: {gap_end_time}")
-    gap_row = df[df['timestamp'] == gap_end_time].iloc[0]
-    print(f"Gap Row:")
-    if gap_direction == 'bullish':
-        print("we are inside the bullish direction")
-        print("we are returning the low of the gap row as the entry price, which is: ", gap_row['low'])
-        print("%%%%%%%%%%%%%%%%%%%%%%%%%%%we are outside the calculate_entry_price function%%%%%%%%%%%%%")
-        return gap_row['low']  # Entry price for bullish trade is the low of the third candle
-    elif gap_direction == 'bearish':
-        print("we are inside the bearish direction")
-        print("we are returning the high of the gap row as the entry price, which is: ", gap_row['high'])
-        print("%%%%%%%%%%%%%%%%%%%%%%%%%%%we are outside the calculate_entry_price function%%%%%%%%%%%%%")
-        return gap_row['high']  # Entry price for bearish trade is the high of the third candle
-
 # Function to execute strategy
 def execute_strategy(df, portfolio):
     unique_dates = df['timestamp'].dt.date.unique()
     count = 0
     for date in unique_dates:
-
         count += 1
         if count <= 2:
             continue
@@ -360,9 +359,7 @@ def execute_strategy(df, portfolio):
         
         if breakout:
             print("Breakout detected.")
-            fair_value_gaps = find_fair_value_gaps(df, 10, 11) + find_fair_value_gaps(df, 14, 15)
-            # print(f"Fair Value Gaps:")
-            # print(fair_value_gaps)
+            fair_value_gaps = find_fair_value_gaps(df, date, 10, 11) + find_fair_value_gaps(df, date, 14, 15)
             if fair_value_gaps:
                 print("Fair value gaps found.")
                 for i, gap in enumerate(fair_value_gaps):
