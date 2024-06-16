@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 # Read the CSV file containing trading data
 # df = pd.read_csv("/Users/alwynbradman/Desktop/Alwyn BA/AB/SilverBullet-main/download/usatechidxusd-m5-bid-2024-01-01-2024-04-30T18_30.csv")
 # df = pd.read_csv("/mnt/E620153F2015185F/Alwyn Repos/SilverBullet-main/download/usatechidxusd-m5-bid-2024-01-01-2024-04-30T18_30.csv")
-df = pd.read_csv("C:/Users/alwyn/Desktop/SilverBullet-main/download/eurusd-m5-bid-2024-05-01-2024-05-31.csv")
+df = pd.read_csv("C:/Users/alwyn/Desktop/SilverBullet-main/download/xauusd-m5-bid-2024-05-01-2024-05-31.csv")
 
 # Convert Unix epoch timestamps to datetime format
 df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
@@ -467,8 +467,8 @@ def execute_strategy(full_dataset, portfolio):
                                         break
                                 if trade_status == 'open':
                                     print("Trade has been closed forcefully at the end of the day.")
-                                    trade_result = 'Closed End of Day'
-                                    trade_exit_time = df[df['timestamp'].hour == 23].iloc[0]['timestamp']
+                                    # trade_result = 'Closed End of Day'
+                                    # trade_exit_time = df[df['timestamp'].hour == 23].iloc[0]['timestamp']
 
                                 # Write trade details to CSV
                                 with open(csv_file, 'a', newline='') as file:
