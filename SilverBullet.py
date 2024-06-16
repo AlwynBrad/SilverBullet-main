@@ -1,5 +1,7 @@
 import pandas as pd
 import numpy as np
+import csv
+import os
 from datetime import datetime, timedelta
 
 # Read the CSV file containing trading data
@@ -371,8 +373,14 @@ def isTaggedIn(df, gap_end_time, entry_price, gap_direction):
 def execute_strategy(full_dataset, portfolio):
     unique_dates = full_dataset['timestamp'].dt.date.unique()
 
+    # Create the CSV file once at the start
+    csv_file = 'trades.csv'
+    if not os.path.isfile(csv_file):
+        with open(csv_file, 'w', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerow(["Entry Price", "Stop Loss", "Target", "Position", "Tagged In Time", "Trade Exit Time", "Trade Status"])
+
     for date in unique_dates:
-        
         df = full_dataset[full_dataset['timestamp'].dt.date == date].copy()
         df.reset_index(drop=True, inplace=True)
 
@@ -385,7 +393,7 @@ def execute_strategy(full_dataset, portfolio):
         print(f"Asia High: {asia_high}, Asia Low: {asia_low}, London High: {london_high}, London Low: {london_low}, Pre-New York High: {pre_new_york_high}, Pre-New York Low: {pre_new_york_low}")
         breakout, entry_price, breakout_type = check_breakout(df, date, asia_high, london_high, pre_new_york_high, asia_low, london_low, pre_new_york_low)
         print(f"Breakout: {breakout}, Entry Price: {entry_price}, Breakout Type: {breakout_type}")
-        
+
         if breakout:
             print("Breakout detected.")
             fair_value_gaps = find_fair_value_gaps(df, date, 10, 11) + find_fair_value_gaps(df, date, 14, 15)
@@ -407,10 +415,14 @@ def execute_strategy(full_dataset, portfolio):
                             target = calculate_target(entry_price, stop_loss, gap_direction)
                             print(f"Enter {position} position at price {entry_price} based on {gap_direction} fair value gap and {breakout_type} breakout.")
                             print(f"Stop-loss: {stop_loss}, Target: {target}")
-                            
+
                             # Check if the price comes back to the entry price
                             if isTaggedIn(df, gap[1], entry_price, gap_direction):
                                 trade_status = 'open'
+                                tagged_in_time = gap[1]
+                                trade_exit_time = None
+                                trade_result = None
+
                                 # Update trade status based on candle movements
                                 for index, candle in df.iterrows():
                                     if candle['timestamp'].hour < 23:  # Iterate until 23:00 EST
@@ -422,12 +434,16 @@ def execute_strategy(full_dataset, portfolio):
                                                 portfolio.update_balance(-0.005 * portfolio.balance)  # Subtract 0.5% from initial balance for loss
                                                 print(f"Updated balance: {portfolio.balance}")
                                                 trade_status = 'closed'
+                                                trade_result = 'Loss'
+                                                trade_exit_time = candle['timestamp']
                                                 break
                                             elif candle['high'] > target:
                                                 print("Trade marked as profit.")
                                                 portfolio.update_balance(0.01 * portfolio.balance)  # Add 1% to initial balance for profit
                                                 print(f"Updated balance: {portfolio.balance}")
                                                 trade_status = 'closed'
+                                                trade_result = 'Profit'
+                                                trade_exit_time = candle['timestamp']
                                                 break
                                         elif position == 'short':
                                             if candle['high'] > stop_loss:
@@ -435,23 +451,30 @@ def execute_strategy(full_dataset, portfolio):
                                                 portfolio.update_balance(-0.005 * portfolio.balance)  # Subtract 0.5% from initial balance for loss
                                                 print(f"Updated balance: {portfolio.balance}")
                                                 trade_status = 'closed'
+                                                trade_result = 'Loss'
+                                                trade_exit_time = candle['timestamp']
                                                 break
                                             elif candle['low'] < target:
                                                 print("Trade marked as profit.")
                                                 portfolio.update_balance(0.01 * portfolio.balance)  # Add 1% to initial balance for profit
                                                 print(f"Updated balance: {portfolio.balance}")
                                                 trade_status = 'closed'
+                                                trade_result = 'Profit'
+                                                trade_exit_time = candle['timestamp']
                                                 break
                                     else:
                                         print("No trade status update after entering into a position.")
                                         break
                                 if trade_status == 'open':
                                     print("Trade has been closed forcefully at the end of the day.")
-                                    # exit_price = df[df['timestamp'].hour == 23].iloc[0]['close']
-                                    # if position == 'long':
-                                    #     portfolio.update_balance((exit_price - entry_price) / entry_price * portfolio.balance)
-                                    # elif position == 'short':
-                                    #     portfolio.update_balance((entry_price - exit_price) / entry_price * portfolio.balance)
+                                    trade_result = 'Closed End of Day'
+                                    trade_exit_time = df[df['timestamp'].hour == 23].iloc[0]['timestamp']
+
+                                # Write trade details to CSV
+                                with open(csv_file, 'a', newline='') as file:
+                                    writer = csv.writer(file)
+                                    writer.writerow([entry_price, stop_loss, target, position, tagged_in_time, trade_exit_time, trade_result])
+
                             else:
                                 print("No trade entered as the price did not come back to the entry price.")
 
