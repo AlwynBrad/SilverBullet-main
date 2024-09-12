@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 # Read the CSV file containing trading data
 # df = pd.read_csv("/Users/alwynbradman/Desktop/Alwyn BA/AB/SilverBullet-main/download/usatechidxusd-m5-bid-2024-01-01-2024-04-30T18_30.csv")
 # df = pd.read_csv("/mnt/E620153F2015185F/Alwyn Repos/SilverBullet-main/download/usatechidxusd-m5-bid-2024-01-01-2024-04-30T18_30.csv")
-df = pd.read_csv("C:/Users/alwyn/Desktop/SilverBullet-main/download/xauusd-m5-bid-2024-05-01-2024-05-31.csv")
+df = pd.read_csv("C:\\Users\\alwyn\\Desktop\\Algo\\SilverBullet-main\\download\\eurusd-m5-bid-2024-05-01-2024-05-31.csv")
 
 # Convert Unix epoch timestamps to datetime format
 df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
@@ -49,74 +49,6 @@ df['day_of_week_str'] = np.where(
 )
 
 df.to_csv("dataframe.csv")
-
-######################################################################################################################
-
-# def define_session_time_range(
-#         df,
-#         session_start_time, 
-#         session_end_time
-# ):
-#     # Create a new column in your DataFrame. It will be True if the time is between the given range and False otherwise.
-#     df['time_in_range'] = df['time'].dt.time.between(
-#         session_start_time,
-#         session_end_time
-#     ) 
-
-#     # we also need to make sure that december 25th is not considered time in range
-#     df['time_in_range'] = np.where(
-#         (df['time'].dt.month == 12) & (df['time'].dt.day == 25),
-#         False,
-#         df['time_in_range']
-#     )
-
-#     df['session_start'] = df['time_in_range'] & ~df['time_in_range'].shift(1, fill_value=False)
-#     df['session_end'] = df['time_in_range'] & ~df['time_in_range'].shift(-1, fill_value=False)
-
-#     df['session_index'] = df['session_start'].cumsum()
-#     df['session_index'] = np.where(
-#         df['time_in_range'] == False,
-#         np.nan,
-#         df['session_index']
-#     )
-
-#     # lets also add a day of week column
-#     df['day_of_week'] = df['time'].dt.dayofweek
-#     # lets add the day of the week as a string
-#     df['day_of_week_str'] = np.where(
-#         df['day_of_week'] == 0,
-#         'Monday',
-#         np.where(
-#             df['day_of_week'] == 1,
-#             'Tuesday',
-#             np.where(
-#                 df['day_of_week'] == 2,
-#                 'Wednesday',
-#                 np.where(
-#                     df['day_of_week'] == 3,
-#                     'Thursday',
-#                     np.where(
-#                         df['day_of_week'] == 4,
-#                         'Friday',
-#                         np.where(
-#                             df['day_of_week'] == 5,
-#                             'Saturday',
-#                             np.where(
-#                                 df['day_of_week'] == 6,
-#                                 'Sunday',
-#                                 np.nan
-#                             )
-#                         )
-#                     )
-#                 )
-#             )
-#         )
-#     )
-
-#     return df
-
-
-######################################################################################################################
 
 # Function to identify key highs and lows for sessions
 def identify_key_highs_lows(df, date, full_dataset):
@@ -396,7 +328,7 @@ def execute_strategy(full_dataset, portfolio):
 
         if breakout:
             print("Breakout detected.")
-            fair_value_gaps = find_fair_value_gaps(df, date, 10, 11) + find_fair_value_gaps(df, date, 14, 15)
+            fair_value_gaps = find_fair_value_gaps(df, date, 10, 11) 
             if fair_value_gaps:
                 print("Fair value gaps found.")
                 for i, gap in enumerate(fair_value_gaps):
@@ -431,7 +363,7 @@ def execute_strategy(full_dataset, portfolio):
                                             print(f"Current balance: {portfolio.balance}")
                                             if candle['low'] < stop_loss:
                                                 print("Trade marked as loss.")
-                                                portfolio.update_balance(-0.005 * portfolio.balance)  # Subtract 0.5% from initial balance for loss
+                                                portfolio.update_balance(-0.01 * portfolio.balance)  # Subtract 1% from initial balance for loss
                                                 print(f"Updated balance: {portfolio.balance}")
                                                 trade_status = 'closed'
                                                 trade_result = 'Loss'
@@ -439,7 +371,7 @@ def execute_strategy(full_dataset, portfolio):
                                                 break
                                             elif candle['high'] > target:
                                                 print("Trade marked as profit.")
-                                                portfolio.update_balance(0.01 * portfolio.balance)  # Add 1% to initial balance for profit
+                                                portfolio.update_balance(0.02 * portfolio.balance)  # Add 2% to initial balance for profit
                                                 print(f"Updated balance: {portfolio.balance}")
                                                 trade_status = 'closed'
                                                 trade_result = 'Profit'
@@ -456,7 +388,7 @@ def execute_strategy(full_dataset, portfolio):
                                                 break
                                             elif candle['low'] < target:
                                                 print("Trade marked as profit.")
-                                                portfolio.update_balance(0.01 * portfolio.balance)  # Add 1% to initial balance for profit
+                                                portfolio.update_balance(0.02 * portfolio.balance)  # Add 1% to initial balance for profit
                                                 print(f"Updated balance: {portfolio.balance}")
                                                 trade_status = 'closed'
                                                 trade_result = 'Profit'
